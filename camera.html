@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>手动拍照上传</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #video-container {
+            display: inline-block;
+            border: 2px solid #555;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        #video {
+            width: 640px;
+            height: 480px;
+            background-color: #ccc;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .button-container {
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            /* Green */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #3e8e41;
+        }
+
+        #upload-status {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .loading {
+            color: orange;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>手动拍照上传</h1>
+
+    <div id="video-container">
+        <video id="video" autoplay></video>
+    </div>
+
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <div class="button-container">
+        <button id="captureBtn">拍照并上传</button>
+    </div>
+
+    <div id="upload-status"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const captureBtn = document.getElementById('captureBtn');
+        const uploadStatus = document.getElementById('upload-status');
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("无法访问摄像头:", err);
+                alert("无法访问摄像头，请检查权限或设备.");
+            }
+        }
+
+        startCamera();
+
+        async function uploadImage(dataURL) {
+            uploadStatus.textContent = "上传中...";
+            uploadStatus.className = "loading";
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/upload', { // 替换为你的后端地址
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: dataURL })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    uploadStatus.textContent = '上传成功！文件保存为：' + result.filename;
+                    uploadStatus.className = "success";
+                } else {
+                    uploadStatus.textContent = '上传失败：' + result.error;
+                    uploadStatus.className = "error";
+                }
+            } catch (error) {
+                console.error('上传错误:', error);
+                uploadStatus.textContent = '上传过程中发生错误.';
+                uploadStatus.className = "error";
+            }
+        }
+
+        captureBtn.addEventListener('click', () => {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/png');
+            uploadImage(dataURL);
+        });
+    </script>
+</body>
+
+</html>
